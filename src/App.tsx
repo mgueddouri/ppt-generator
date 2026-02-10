@@ -133,10 +133,10 @@ export default function App() {
         <div className="absolute inset-0 bg-mesh opacity-70" />
         <div className="relative mx-auto flex min-h-[45vh] max-w-6xl flex-col justify-center px-6 py-20">
           <p className="text-sm uppercase tracking-[0.2em] text-ink-200">
-            Multi-Agents PPTX Factory
+            MEETUP - YOMEVA x PARIS TYPESCRIPT - 10/02/2026
           </p>
           <h1 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">
-            Transforme un sujet technique en presentation percutante
+            Générateur de présentation
           </h1>
           <p className="mt-4 max-w-2xl text-base text-ink-200">
             Orchestration LangGraph, redaction experte, meme slide sur mesure et

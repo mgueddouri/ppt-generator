@@ -3,24 +3,20 @@ import { getLLM } from "../lib/llm";
 import type { PresentationState } from "../lib/types";
 import { generateMemeImage } from "../tools/images";
 
+// 1. Schéma de sortie strict
 const MemeOutputSchema = z.object({
-  imageDescription: z.string(),
-  topText: z.string(),
-  bottomText: z.string()
+  imageDescription: z.string().describe("Description détaillée pour DALL-E : personnages, expressions, décor."),
+  topText: z.string().describe("Le texte d'accroche ou la situation (Setup)"),
+  bottomText: z.string().describe("La chute ou la réaction (Punchline)")
 });
 
 type MemeOutput = z.infer<typeof MemeOutputSchema>;
 
-const fallbackMemes = [
+const fallbackMemes: MemeOutput[] = [
   {
-    imageDescription: "Drake Hotline Bling comparing manual slide creation vs automated multi-agent PPTX generation",
-    topText: "Copier-coller des slides",
-    bottomText: "Pipeline multi-agents + PptxGenJS"
-  },
-  {
-    imageDescription: "Distracted Boyfriend: engineer ignoring old monolithic generator, looking at LangGraph multi-agent workflow",
-    topText: "Générateur monolithique",
-    bottomText: "Orchestration LangGraph"
+    imageDescription: "Un ingénieur fatigué devant 10 écrans affichant des erreurs, style cartoon.",
+    topText: "Mettre en prod le vendredi à 17h",
+    bottomText: "C'est le problème du futur moi"
   }
 ];
 
@@ -30,46 +26,63 @@ export async function runMeme(
 ): Promise<PresentationState["slides"]> {
   const llm = getLLM();
   const updated = [...slides] as PresentationState["slides"];
-  const memeIndex = 3;
+  const memeIndex = 3; // Index de la 4ème slide
   const slide = updated[memeIndex];
+  
   if (!slide) return updated;
 
+  // Si pas de LLM, on utilise un fallback immédiat
   if (!llm) {
-    const fallback = fallbackMemes[Math.floor(Math.random() * fallbackMemes.length)];
-    const imageBase64 = await generateMemeImage(fallback);
-    updated[memeIndex] = {
-      ...slide,
-      meme: { ...fallback, imageBase64: imageBase64 ?? undefined },
-      title: slide.title || "Meme Time",
-      angle: slide.angle || "Relacher la pression technique"
-    };
-    return updated;
+    return applyMemeToSlide(updated, memeIndex, fallbackMemes[0]);
   }
 
-  const prompt = `Tu es le Meme Lord. Sujet: "${topic}".
-Trouve un meme adaptee au sujet technique. Rends uniquement un JSON valide avec:
-{"imageDescription":"...","topText":"...","bottomText":"..."}.
-Pas de texte additionnel.`;
+  // 2. Configuration du LLM pour forcer le JSON propre
+  const structuredLlm = llm.withStructuredOutput(MemeOutputSchema);
 
-  const response = await llm.invoke(prompt);
-  const raw = typeof response.content === "string" ? response.content : JSON.stringify(response.content);
+  const context = slides[1]?.title || topic;
+
+  const prompt = `Tu es le Meme Lord, un développeur senior cynique et expert en culture web.
+Sujet technique : "${topic}"
+Contexte actuel : "${context}"
+
+Ta mission : Concevoir une slide de meme (index 4) qui illustre une vérité douloureuse, une frustration ou une absurdité liée au sujet.
+
+CONSIGNES :
+1. Choisis un concept de meme classique (ex: 'This is Fine', 'Distracted Boyfriend', 'Clown applying makeup').
+2. Le 'topText' doit être la punchline sarcastique
+3. L' 'imageDescription' doit être un prompt visuel riche pour générer l'image.
+
+Sois drôle, un peu piquant, et évite absolument l'humour "corporate" ennuyeux.`;
+
   try {
-    const parsed = MemeOutputSchema.parse(JSON.parse(raw));
-    const imageBase64 = await generateMemeImage(parsed);
-    updated[memeIndex] = {
-      ...slide,
-      meme: { ...parsed, imageBase64: imageBase64 ?? undefined },
-      title: slide.title || "Meme"
-    };
-  } catch {
-    const fallback = fallbackMemes[0];
-    const imageBase64 = await generateMemeImage(fallback);
-    updated[memeIndex] = {
-      ...slide,
-      meme: { ...fallback, imageBase64: imageBase64 ?? undefined },
-      title: slide.title || "Meme"
-    };
+    // 3. Appel direct (plus de JSON.parse manuel !)
+    const parsedMeme = await structuredLlm.invoke(prompt);
+    return await applyMemeToSlide(updated, memeIndex, parsedMeme);
+  } catch (error) {
+    console.error("Échec du Meme Lord, utilisation du fallback technique.", error);
+    const fallback = fallbackMemes[Math.floor(Math.random() * fallbackMemes.length)];
+    return await applyMemeToSlide(updated, memeIndex, fallback);
   }
+}
 
-  return updated;
+/**
+ * Fonction utilitaire pour mettre à jour la slide et appeler le générateur d'image
+ */
+async function applyMemeToSlide(
+  slides: PresentationState["slides"],
+  index: number,
+  memeData: MemeOutput
+): Promise<PresentationState["slides"]> {
+  const imageBase64 = await generateMemeImage(memeData);
+  
+  slides[index] = {
+    ...slides[index],
+    meme: { 
+      ...memeData, 
+      imageBase64: imageBase64 ?? undefined 
+    },
+    title: "Intermède Culturel", // Titre plus sympa que juste "Meme"
+  };
+  
+  return slides;
 }

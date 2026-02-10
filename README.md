@@ -10,6 +10,24 @@ Ce projet génère une présentation PowerPoint à partir d'un sujet. Il orchest
 4. Le compilateur génère un `.pptx` dans `public/generated`.
 5. Le serveur stream des événements SSE (`status`, `state`, `done`) vers l'UI.
 
+## Schéma LangGraph + SSE
+```mermaid
+flowchart LR
+  UI[UI React Vite\nsrc/App.tsx] -->|POST /api/generate| API[Express API\nserver/index.ts]
+  API -->|init state| LG[LangGraph StateGraph\nserver/lib/graph.ts]
+
+  LG --> PL[planner\nserver/agents/planner.ts]
+  PL --> WR[writer\nserver/agents/writer.ts]
+  WR --> ME[meme\nserver/agents/meme.ts]
+  ME --> CO[compiler\nserver/tools/pptx.ts]
+
+  CO -->|PPTX file| FS[public/generated/*.pptx]
+  CO -->|downloadUrl| LG
+  LG -->|stream custom/status| API
+  LG -->|stream updates/state| API
+  API -->|SSE: status/state/done| UI
+```
+
 ## Composants principaux
 ### Client (Vite)
 - Entrée principale: `src/App.tsx`.
@@ -31,11 +49,6 @@ Ce projet génère une présentation PowerPoint à partir d'un sujet. Il orchest
 - Outils:
   - `server/tools/images.ts` -> appel OpenAI Images API (DALL·E).
   - `server/tools/pptx.ts` -> génération PPTX via PptxGenJS.
-
-### Next.js (optionnel, non utilisé par `npm run dev`)
-- Pages UI: `src/app/page.tsx`.
-- API route SSE: `src/app/api/generate/route.ts`.
-- Cette route réutilise l'orchestration LangGraph, mais n'est pas démarrée par le script `dev` actuel.
 
 ## Flux de données détaillé
 ### 1) Entrée utilisateur
@@ -116,7 +129,7 @@ Ports:
 
 ## Répertoires
 - `server/`: backend Express, LangGraph, agents, outils PPTX/images.
-- `src/`: frontend Vite et dossier `app/` Next (optionnel).
+- `src/`: frontend Vite.
 - `public/generated/`: sorties `.pptx` générées.
 
 ## Points d'extension
