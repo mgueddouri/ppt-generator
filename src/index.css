@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  font-family: 'Work Sans', ui-sans-serif, system-ui;
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #64748b transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
